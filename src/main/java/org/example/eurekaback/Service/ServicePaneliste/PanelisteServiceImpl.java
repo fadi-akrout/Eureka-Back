@@ -61,13 +61,8 @@ public class PanelisteServiceImpl implements PanelisteService {
         Campagne campagne = campagneRepository.findById(campagneId)
                 .orElseThrow(() -> new RuntimeException("Campagne not found with id: " + campagneId));
 
-        // Check if already participating
-        boolean alreadyParticipating = panelisteCampagneRepository.findByPaneliste(paneliste).stream()
-                .anyMatch(pc -> pc.getCampagne().getId() == campagneId);
-
-        if (!alreadyParticipating) {
-            paneliste.participerCampagne(campagne);
-            panelisteRepository.save(paneliste);
-        }
+        // The participerCampagne method handles duplicate checking internally
+        paneliste.participerCampagne(campagne);
+        panelisteRepository.save(paneliste);
     }
 }

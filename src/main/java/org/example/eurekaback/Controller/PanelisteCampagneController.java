@@ -8,6 +8,7 @@ import org.example.eurekaback.Repository.CampagneRepository;
 import org.example.eurekaback.Repository.PanelisteCampagneRepository;
 import org.example.eurekaback.Repository.PanelisteRepository;
 import org.example.eurekaback.Service.ServicePanelisteCampagne.PanelisteCampagneService;
+import org.example.eurekaback.Service.DataMigrationService;
 import org.springframework.data.rest.webmvc.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class PanelisteCampagneController {
     private final PanelisteRepository panelisteRepository;
     private final CampagneRepository campagneRepository;
     private final PanelisteCampagneRepository panelisteCampagneRepository;
+    private final DataMigrationService dataMigrationService;
 
     @GetMapping
     public ResponseEntity<List<PanelisteCampagne>> getAllPanelisteCampagnes() {
@@ -62,5 +64,37 @@ public class PanelisteCampagneController {
                 .orElseThrow(() -> new ResourceNotFoundException("Campagne not found with id: " + campagneId));
 
         return ResponseEntity.ok(panelisteCampagneRepository.findByCampagne(campagne));
+    }
+
+    // Migration endpoints - use these once after deployment
+    @PostMapping("/migrate-data")
+    public ResponseEntity<String> migrateExistingData() {
+        try {
+            dataMigrationService.migrateExistingPanelisteCampagneData();
+            return ResponseEntity.ok("Data migration completed successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Migration failed: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/mark-completed")
+    public ResponseEntity<String> markExistingAsCompleted() {
+        try {
+            dataMigrationService.markExistingAsCompleted();
+            return ResponseEntity.ok("Existing records marked as completed");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Operation failed: " + e.getMessage());
+        }
+    }
+
+    // New endpoint to get only participated campaigns
+    @GetMapping("/paneliste/{panelisteId}/participated")
+    public ResponseEntity<List<PanelisteCampagne>> getParticipatedCampaignsByPaneliste(@PathVariable int panelisteId) {
+        Paneliste paneliste = panelisteRepository.findById(panelisteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Paneliste not found with id: " + panelisteId));
+
+        return ResponseEntity.ok(panelisteCampagneRepository.findParticipatedCampaignsByPaneliste(paneliste));
     }
 }
