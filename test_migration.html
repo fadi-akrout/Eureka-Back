@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Migration Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
+        .success { border-color: #28a745; background: #d4edda; }
+        .error { border-color: #dc3545; background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>Participation Request Migration Tool</h1>
+    
+    <button onclick="testEndpoint()">Test Connection</button>
+    <button onclick="applyMigration()">Apply Migration</button>
+    <button onclick="validateMigration()">Validate Migration</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function applyMigration() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Applying migration...';
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/migration/participation-requests', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const responseText = await response.text();
+                console.log('Response text:', responseText);
+                
+                if (responseText) {
+                    const data = JSON.parse(responseText);
+                    if (response.ok) {
+                        resultDiv.innerHTML = `<div class="result success">Migration Success: ${data.message}</div>`;
+                    } else {
+                        resultDiv.innerHTML = `<div class="result error">Migration Error: ${data.message}</div>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">Empty response from server (Status: ${response.status})</div>`;
+                }
+            } catch (error) {
+                console.error('Error details:', error);
+                resultDiv.innerHTML = `<div class="result error">Network Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function validateMigration() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Validating migration...';
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/migration/participation-requests/validate', {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="result success">Validation Success: ${data.message}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">Validation Error: ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">Network Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testEndpoint() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing connection...';
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/migration/test', {
+                    method: 'GET'
+                });
+                
+                console.log('Test response status:', response.status);
+                
+                const responseText = await response.text();
+                console.log('Test response text:', responseText);
+                
+                if (responseText) {
+                    const data = JSON.parse(responseText);
+                    if (response.ok) {
+                        resultDiv.innerHTML = `<div class="result success">Connection Test Success: ${data.message}</div>`;
+                    } else {
+                        resultDiv.innerHTML = `<div class="result error">Connection Test Error: ${data.message}</div>`;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">Empty response from server (Status: ${response.status})</div>`;
+                }
+            } catch (error) {
+                console.error('Test error details:', error);
+                resultDiv.innerHTML = `<div class="result error">Connection Test Failed: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

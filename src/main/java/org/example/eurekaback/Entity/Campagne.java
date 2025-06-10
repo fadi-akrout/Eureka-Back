@@ -1,5 +1,7 @@
 package org.example.eurekaback.Entity;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Transient;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,14 +25,37 @@ public class Campagne {
     private int id;
 
     private String nom;
+    @Column(columnDefinition = "TEXT")
     private String description;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private Date dateDebut;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private Date dateFin;
     private String statut;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "annonceur_id")
+    @JsonIgnore  // Ignore the full annonceur object in JSON serialization
     private Annonceur annonceur;
+    
+    // Transient field to store annonceurId for serialization
+    @Transient
+    private Integer annonceurId;
+    
+    // Method to get annonceurId for frontend compatibility
+    public Integer getAnnonceurId() {
+        // First try to get from the annonceur object
+        if (annonceur != null) {
+            return annonceur.getId();
+        }
+        // Fall back to the transient field
+        return annonceurId;
+    }
+    
+    // This method is used for JSON deserialization and by the service layer
+    public void setAnnonceurId(Integer annonceurId) {
+        this.annonceurId = annonceurId;
+    }
 
     @OneToOne(mappedBy = "campagne", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 

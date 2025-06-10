@@ -15,6 +15,7 @@ public interface CampagneService {
     void deleteCampagne(int id);
 
     Campagne createCampagneWithProduitAndFormulaire(Campagne campagne, Produit produit, Formulaire formulaire);
+    Campagne updateCampagneWithProduitAndFormulaire(int id, Campagne campagne, Produit produit, Formulaire formulaire);
     List<Campagne> getCampagnesActives();
     void assignerPanelistesACampagne(Campagne campagne, List<Paneliste> panelistes);
     void demarrerCampagne(int campagneId);
