@@ -1,0 +1,108 @@
+@startuml
+!theme plain
+title Diagramme de Cas d'Utilisation - Sprint 2 : Gestion de Base des Campagnes\nPlateforme Eureka - Fonctionnalités Essentielles
+
+' Définition des acteurs
+actor "Annonceur" as Annonceur
+actor "Paneliste" as Paneliste
+actor "Admin" as Admin
+
+' Définition du système simplifié
+rectangle "Module Gestion Campagnes" {
+
+    ' Cas d'utilisation principaux de base
+    usecase "Créer campagne\n(avec produit et formulaire)" as UC1
+    usecase "Modifier campagne" as UC2
+    usecase "Supprimer campagne" as UC3
+    usecase "Lister campagnes" as UC4
+    usecase "Consulter détails campagne" as UC5
+    usecase "Gérer statut campagne\n(Brouillon/Publiée/Clôturée)" as UC6
+
+    ' Gestion formulaires et questions
+    usecase "Ajouter questions\nau formulaire" as UC7
+    usecase "Modifier questions" as UC8
+    usecase "Supprimer questions" as UC9
+    usecase "Prévisualiser formulaire" as UC10
+
+    ' Cas d'utilisation techniques de base
+    usecase "Authentification utilisateur" as AUTH
+    usecase "Contrôle d'accès par rôle" as RBAC
+    usecase "Validation des données" as VAL
+    usecase "Pagination des résultats" as PAGE
+    usecase "Filtrage par statut" as FILTER
+}
+
+' Relations Annonceur
+Annonceur --> UC1 : "Crée ses campagnes"
+Annonceur --> UC2 : "Modifie ses campagnes"
+Annonceur --> UC4 : "Liste ses campagnes"
+Annonceur --> UC5 : "Consulte ses campagnes"
+Annonceur --> UC6 : "Gère statuts de ses campagnes"
+Annonceur --> UC7 : "Ajoute questions"
+Annonceur --> UC8 : "Modifie questions"
+Annonceur --> UC9 : "Supprime questions"
+Annonceur --> UC10 : "Prévisualise formulaire"
+
+' Relations Paneliste
+Paneliste --> UC4 : "Voit campagnes publiées"
+Paneliste --> UC5 : "Consulte campagnes publiques"
+Paneliste --> UC10 : "Prévisualise formulaires"
+
+' Relations Admin
+Admin --> UC1 : "Crée toute campagne"
+Admin --> UC2 : "Modifie toute campagne"
+Admin --> UC3 : "Supprime campagnes"
+Admin --> UC4 : "Liste toutes campagnes"
+Admin --> UC5 : "Consulte tous détails"
+Admin --> UC6 : "Force changements statut"
+
+' Relations d'inclusion (<<include>>) - Obligatoires
+UC1 ..> AUTH : "<<include>>"
+UC1 ..> RBAC : "<<include>>"
+UC1 ..> VAL : "<<include>>"
+
+UC2 ..> AUTH : "<<include>>"
+UC2 ..> RBAC : "<<include>>"
+UC2 ..> VAL : "<<include>>"
+
+UC3 ..> AUTH : "<<include>>"
+UC3 ..> RBAC : "<<include>>"
+
+UC4 ..> AUTH : "<<include>>"
+UC4 ..> RBAC : "<<include>>"
+UC4 ..> PAGE : "<<include>>"
+UC4 ..> FILTER : "<<include>>"
+
+UC5 ..> AUTH : "<<include>>"
+UC5 ..> RBAC : "<<include>>"
+
+UC6 ..> AUTH : "<<include>>"
+UC6 ..> RBAC : "<<include>>"
+UC6 ..> VAL : "<<include>>"
+
+UC7 ..> AUTH : "<<include>>"
+UC7 ..> RBAC : "<<include>>"
+UC7 ..> VAL : "<<include>>"
+
+UC8 ..> AUTH : "<<include>>"
+UC8 ..> RBAC : "<<include>>"
+UC8 ..> VAL : "<<include>>"
+
+UC9 ..> AUTH : "<<include>>"
+UC9 ..> RBAC : "<<include>>"
+
+UC10 ..> AUTH : "<<include>>"
+UC10 ..> RBAC : "<<include>>"
+
+' Notes explicatives simplifiées
+note right of UC1 : "Création complète :\nCampagne + Produit automatique\n+ Formulaire vide"
+
+note right of UC3 : "Suppression cascade :\nCampagne + Produit + Formulaire\n+ Questions associées"
+
+note bottom of UC4 : "Filtrage par rôle :\n• Annonceur : ses campagnes\n• Admin : toutes\n• Paneliste : publiées uniquement"
+
+note left of UC6 : "Gestion statuts :\n• Brouillon → Publiée\n• Publiée → Clôturée\nAdmin peut forcer transitions"
+
+note bottom of RBAC : "Contrôle d'accès :\n• ANNONCEUR : ses ressources\n• ADMIN : toutes ressources\n• PANELISTE : lecture seule"
+
+@enduml

@@ -1,0 +1,143 @@
+@startuml Diagramme_Sequence_Sentiment_Analysis_AI
+
+title Mécanisme de Traitement des Données de l'API IA - Analyse de Sentiment
+
+actor "Frontend\n(Angular)" as Frontend
+participant "CampaignAnalyticsController" as Controller
+participant "CampaignSentimentAnalysisService" as CampaignService
+participant "GeminiSentimentAnalysisService" as GeminiService
+participant "Google Gemini API" as GeminiAPI
+participant "SentimentAnalysisPersistenceService" as PersistenceService
+database "PostgreSQL" as DB
+
+== Phase 1: Déclenchement de l'Analyse ==
+
+Frontend -> Controller : POST /api/campaigns/{id}/analyze-sentiment
+activate Controller
+note right of Controller : Authentification et autorisation\n(Admin ou Annonceur propriétaire)
+
+Controller -> CampaignService : analyzeCampaignFeedbacks(campaignId)
+activate CampaignService
+
+== Phase 2: Préparation et Validation ==
+
+CampaignService -> DB : findById(campaignId)
+activate DB
+DB --> CampaignService : Optional<Campagne>
+deactivate DB
+
+alt Campagne trouvée et contient des feedbacks
+    CampaignService -> CampaignService : extractFeedbacks(campagne)
+    note right of CampaignService : Validation et préparation\ndes données textuelles
+else Campagne non trouvée ou sans feedbacks
+    CampaignService --> Controller : SaveSentimentAnalysisResponseDTO(error)
+    Controller --> Frontend : 400 Bad Request
+    note right of Frontend : Gestion d'erreur côté client
+end
+
+== Phase 3: Traitement par Batch ==
+
+loop Pour chaque feedback de la campagne
+    CampaignService -> CampaignService : createSentimentAnalysisRequest(feedback.commentaire)
+
+    == Appel API IA ==
+    CampaignService -> GeminiService : analyzeSentiment(SentimentAnalysisRequestDTO)
+    activate GeminiService
+
+    GeminiService -> GeminiService : prepareGeminiPayload(text)
+    note right of GeminiService : Construction du payload JSON\navec prompt d'analyse de sentiment
+
+    GeminiService -> GeminiAPI : POST /v1/models/gemini-pro:generateContent
+    activate GeminiAPI
+    note right of GeminiAPI : Modèle: Google Gemini Pro\nPrompt: Analyse de sentiment contextuelle
+
+    GeminiAPI --> GeminiService : JSON Response\n{"sentiment": "POSITIVE",\n "confidence": 0.85,\n "scores": {...},\n "insights": "..."}
+    deactivate GeminiAPI
+
+    == Traitement et Transformation des Données IA ==
+    GeminiService -> GeminiService : parseGeminiResponse(jsonResponse)
+    note right of GeminiService : Validation et parsing du JSON\nGestion des erreurs de format
+
+    GeminiService -> GeminiService : transformToSentimentAnalysisResponseDTO()
+    note right of GeminiService : Mapping vers les structures Java:\n- SentimentScores\n- Insights textuels\n- Métadonnées de confiance
+
+    GeminiService --> CampaignService : SentimentAnalysisResponseDTO
+    deactivate GeminiService
+
+    == Enrichissement Post-IA ==
+    alt Analyse réussie
+        CampaignService -> CampaignService : createFeedbackSentiment(response, feedback)
+        note right of CampaignService : Création de l'objet FeedbackSentiment:\n- Mapping des scores détaillés\n- Ajout de métadonnées temporelles\n- Extraction de mots-clés locaux
+
+        CampaignService -> CampaignService : extractKeywords(feedback.commentaire)
+        note right of CampaignService : Traitement NLP local:\n- Tokenisation\n- Filtrage des stopwords\n- Extraction des termes significatifs
+
+        CampaignService -> CampaignService : updateAggregatedStats(sentiment, confidence)
+        note right of CampaignService : Mise à jour des compteurs:\n- sentimentCounts[POSITIVE/NEGATIVE/NEUTRAL]\n- totalConfidence pour moyenne\n- successfulAnalyses++
+    else Analyse échouée
+        CampaignService -> CampaignService : logAnalysisFailure(feedbackId, error)
+        note right of CampaignService : failedAnalyses++\nLogs d'erreur détaillés
+    end
+end
+
+== Phase 4: Agrégation et Calculs Analytiques ==
+
+CampaignService -> CampaignService : createBatchAnalysisInfo()
+note right of CampaignService : Métadonnées de traitement:\n- Temps de traitement total\n- Statistiques de succès/échec\n- Timestamps de début/fin
+
+CampaignService -> CampaignService : calculateOverallSentiment(sentimentCounts)
+note right of CampaignService : Logique de détermination:\n- Sentiment majoritaire\n- Cas spécial "MIXED" si égalité\n- Calcul de confiance moyenne
+
+CampaignService -> CampaignService : generateSentimentAnalysisSummary()
+note right of CampaignService : Création du résumé complet:\n- Distribution des sentiments\n- Insights globaux\n- Mots-clés agrégés\n- Scores de confiance moyens
+
+== Phase 5: Persistance des Résultats ==
+
+CampaignService -> CampaignService : createSaveRequest(campaignId, analysisData, summary)
+
+CampaignService -> PersistenceService : saveSentimentAnalysis(SaveSentimentAnalysisRequestDTO)
+activate PersistenceService
+
+PersistenceService -> DB : saveResultatAnalyse(analysisData, summary)
+activate DB
+note right of DB : Sauvegarde transactionnelle:\n- ResultatAnalyse (entité principale)\n- SentimentAnalysisData (JSON)\n- SentimentAnalysisSummary (JSON)
+DB --> PersistenceService : ResultatAnalyse entity
+deactivate DB
+
+PersistenceService --> CampaignService : SaveSentimentAnalysisResponseDTO(success)
+deactivate PersistenceService
+
+== Phase 6: Réponse et Notification ==
+
+CampaignService --> Controller : SaveSentimentAnalysisResponseDTO
+deactivate CampaignService
+
+Controller -> Controller : createAnalysisCompletionResponse()
+note right of Controller : Construction de la réponse:\n- Status de l'analyse\n- Statistiques de traitement\n- URLs des rapports générés
+
+Controller --> Frontend : 200 OK\n{"status": "completed",\n "analyzed": 45,\n "failed": 2,\n "overallSentiment": "POSITIVE"}
+deactivate Controller
+
+== Phase 7: Récupération des Rapports (Optionnel) ==
+
+Frontend -> Controller : GET /api/campaigns/{id}/sentiment-report
+activate Controller
+
+Controller -> PersistenceService : getCampaignSentimentAnalysis(campaignId)
+activate PersistenceService
+
+PersistenceService -> DB : findSentimentAnalysisByCampaignId(campaignId)
+activate DB
+DB --> PersistenceService : ResultatAnalyse with JSON data
+deactivate DB
+
+PersistenceService -> PersistenceService : transformToReportDTO()
+note right of PersistenceService : Transformation des données JSON\nen DTOs structurés pour le frontend
+
+PersistenceService --> Controller : CampaignSentimentAnalysisResponseDTO
+deactivate PersistenceService
+
+Controller --> Frontend : Rapport complet d'analyse de sentiment
+deactivate Controller
+
+@enduml

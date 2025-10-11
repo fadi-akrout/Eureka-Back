@@ -4,18 +4,28 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.eurekaback.Dto.MessageResponse;
 import org.example.eurekaback.Service.ParticipationRequestMigrationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/migration")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", maxAge = 3600)
 @Slf4j
 public class MigrationController {
     
     private final ParticipationRequestMigrationService migrationService;
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
     
     /**
      * Migrate existing PanelisteCampagne records for participation request system
@@ -52,6 +62,45 @@ public class MigrationController {
             log.error("Validation failed: ", e);
             return ResponseEntity.badRequest()
                 .body(new MessageResponse("Validation failed: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Run the Reponse schema update migration
+     */
+    @PostMapping("/reponse-schema")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MessageResponse> migrateReponseSchema() {
+        log.info("Reponse schema migration endpoint called");
+        try {
+            log.info("Starting Reponse schema migration...");
+            
+            // Load SQL from file
+            InputStream is = getClass().getResourceAsStream("/db/migration/update_reponse_schema.sql");
+            if (is == null) {
+                throw new RuntimeException("Could not find migration SQL file");
+            }
+            
+            String sql = new BufferedReader(
+                new InputStreamReader(is, StandardCharsets.UTF_8))
+                .lines()
+                .collect(Collectors.joining("\n"));
+            
+            // Execute SQL statements
+            String[] statements = sql.split(";");
+            for (String statement : statements) {
+                if (!statement.trim().isEmpty()) {
+                    log.info("Executing SQL: {}", statement);
+                    jdbcTemplate.execute(statement);
+                }
+            }
+            
+            log.info("Reponse schema migration completed successfully");
+            return ResponseEntity.ok(new MessageResponse("Reponse schema migration completed successfully"));
+        } catch (Exception e) {
+            log.error("Reponse schema migration failed: ", e);
+            return ResponseEntity.badRequest()
+                .body(new MessageResponse("Reponse schema migration failed: " + e.getMessage()));
         }
     }
     

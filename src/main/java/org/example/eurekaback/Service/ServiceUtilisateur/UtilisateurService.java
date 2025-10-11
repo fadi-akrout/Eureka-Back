@@ -1,7 +1,5 @@
 package org.example.eurekaback.Service.ServiceUtilisateur;
 
-
-
 import org.example.eurekaback.Entity.Utilisateur;
 
 import java.util.List;
@@ -13,4 +11,5 @@ public interface UtilisateurService {
     Optional<Utilisateur> getUtilisateurByEmail(String email);
     Utilisateur createUtilisateur(Utilisateur utilisateur);
     void deleteUtilisateur(int id);
+    Utilisateur updateUtilisateur(Utilisateur utilisateur);
 }

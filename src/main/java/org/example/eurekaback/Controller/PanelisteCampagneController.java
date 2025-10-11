@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import org.example.eurekaback.Entity.Campagne;
 import org.example.eurekaback.Entity.Paneliste;
 import org.example.eurekaback.Entity.PanelisteCampagne;
+import org.example.eurekaback.DTO.PanelisteCampagneWithCampaignDTO;
+import org.example.eurekaback.DTO.CampagneDTO;
 import org.example.eurekaback.Repository.CampagneRepository;
 import org.example.eurekaback.Repository.PanelisteCampagneRepository;
 import org.example.eurekaback.Repository.PanelisteRepository;
@@ -13,8 +15,10 @@ import org.springframework.data.rest.webmvc.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/paneliste-campagnes")
@@ -89,12 +93,20 @@ public class PanelisteCampagneController {
         }
     }
 
-    // New endpoint to get only participated campaigns
+    // New endpoint to get only participated campaigns with full campaign data
     @GetMapping("/paneliste/{panelisteId}/participated")
-    public ResponseEntity<List<PanelisteCampagne>> getParticipatedCampaignsByPaneliste(@PathVariable int panelisteId) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('ANNONCEUR') or (hasRole('PANELISTE') and @panelistSecurity.isOwner(authentication, #panelisteId))")
+    public ResponseEntity<List<CampagneDTO>> getParticipatedCampaignsByPaneliste(@PathVariable int panelisteId) {
         Paneliste paneliste = panelisteRepository.findById(panelisteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Paneliste not found with id: " + panelisteId));
 
-        return ResponseEntity.ok(panelisteCampagneRepository.findParticipatedCampaignsByPaneliste(paneliste));
+        List<PanelisteCampagne> participations = panelisteCampagneRepository.findParticipatedCampaignsByPaneliste(paneliste);
+        
+        List<CampagneDTO> result = participations.stream()
+                .map(pc -> new CampagneDTO(pc.getCampagne()))
+                .distinct() // Remove duplicates if any
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
     }
 }

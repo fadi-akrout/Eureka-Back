@@ -19,10 +19,9 @@ import java.util.List;
 public class Paneliste extends Utilisateur {
 
     @ElementCollection
-    @JsonIgnore
     private List<String> interets = new ArrayList<>();
 
-    @OneToMany(mappedBy = "paneliste", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "paneliste", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JsonIgnore
     private List<PanelisteCampagne> campagnesParticipees = new ArrayList<>();
 

@@ -19,12 +19,12 @@ public class PanelisteCampagne {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "paneliste_id")
     @JsonIgnore
     private Paneliste paneliste;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "campagne_id")
     @JsonIgnore
     private Campagne campagne;

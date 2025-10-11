@@ -6,8 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 
 @Getter
@@ -15,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "Formulaire")
+@Table(name = "formulaire")
 public class Formulaire {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,5 +27,5 @@ public class Formulaire {
     private Campagne campagne;
 
     @OneToMany(mappedBy = "formulaire", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<FormulaireQuestion> formulaireQuestions = new ArrayList<>();
+    private Set<FormulaireQuestion> formulaireQuestions = new HashSet<>();
 }

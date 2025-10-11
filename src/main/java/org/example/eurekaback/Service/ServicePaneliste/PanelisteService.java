@@ -14,4 +14,5 @@ public interface PanelisteService {
 
     List<Campagne> getCampagnesParticipees(int panelisteId);
     void participerACampagne(int panelisteId, int campagneId);
+    Paneliste updatePaneliste(int id, Paneliste paneliste);
 }

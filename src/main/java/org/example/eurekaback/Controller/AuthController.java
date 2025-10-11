@@ -95,7 +95,7 @@ public class AuthController {
                 System.out.println("Email already in use: " + signupRequest.getEmail());
                 return ResponseEntity
                         .badRequest()
-                        .body(new MessageResponse("Error: Email is already in use!"));
+                        .body(new MessageResponse(" Email is already in use!"));
             }
 
             // Determine user type and register accordingly

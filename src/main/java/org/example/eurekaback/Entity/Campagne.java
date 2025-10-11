@@ -18,7 +18,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "Campagne")
+@Table(name = "campagne")
 public class Campagne {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,6 +32,9 @@ public class Campagne {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private Date dateFin;
     private String statut;
+    
+    @Column(columnDefinition = "TEXT")
+    private String imageUrl; // URL to the stored image
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "annonceur_id")
@@ -58,20 +61,24 @@ public class Campagne {
     }
 
     @OneToOne(mappedBy = "campagne", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-
+    @JsonIgnore
     private Produit produit;
 
     @OneToMany(mappedBy = "campagne", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Feedback> feedbacks = new ArrayList<>();
 
     @OneToOne(mappedBy = "campagne", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private Formulaire formulaire;
 
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "resultat_analyse_id", unique = true, nullable = true)
+    @JsonIgnore
     private ResultatAnalyse resultatAnalyse;
 
     @OneToMany(mappedBy = "campagne", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<PanelisteCampagne> panelisteCampagnes = new ArrayList<>();
 
 

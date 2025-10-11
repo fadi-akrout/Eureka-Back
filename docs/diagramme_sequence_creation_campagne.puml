@@ -1,0 +1,94 @@
+@startuml
+!theme plain
+title Diagramme de Séquence - Création Campagne Complète\nSprint 2 : Plateforme Eureka
+
+' Acteurs et composants
+actor "Annonceur" as User
+participant "CampaignFormComponent\n(Angular)" as Angular
+participant "QuestionsFormComponent\n(Angular)" as QuestionsForm
+participant "CampaignDetailComponent\n(Angular)" as DetailPage
+participant "CampaignController" as Controller
+participant "CampaignService" as CampService
+participant "ProductService" as ProdService
+participant "FormulaireService" as FormService
+participant "CampaignRepository" as CampRepo
+participant "ProductRepository" as ProdRepo
+participant "FormulaireRepository" as FormRepo
+database "PostgreSQL" as DB
+
+== Phase 1: Saisie des Données Complètes ==
+
+User -> Angular : Remplit formulaire unique\n• Données campagne (nom, description, dates)\n• Données produit (nom, catégorie, description)
+Angular -> Angular : Validation côté client\n• Champs obligatoires\n• Cohérence des dates
+
+== Phase 2: Création Campagne + Produit + Formulaire ==
+
+User -> Angular : Clique "Ajouter Campagne"
+Angular -> Controller : POST /api/campagnes/complete\nBody: {campaignData, productData} + JWT
+Controller -> Controller : Validation JWT + rôle ANNONCEUR
+
+Controller -> CampService : createCampaignComplete(campaignData, productData, userId)
+
+' Création campagne
+CampService -> CampService : Validation métier\n• Dates cohérentes
+CampService -> CampRepo : save(campagne)
+CampRepo -> DB : INSERT campagne
+DB -> CampRepo : campagne_id = 123
+CampRepo -> CampService : Campagne créée (id=123)
+
+' Création produit associé automatiquement
+CampService -> ProdService : createProductForCampaign(campaignId=123, productData)
+ProdService -> ProdService : Validation données produit
+ProdService -> ProdRepo : save(produit avec campagne_id=123)
+ProdRepo -> DB : INSERT produit
+DB -> ProdRepo : produit_id = 456
+ProdRepo -> ProdService : Produit créé (id=456)
+
+' Création formulaire vide automatiquement
+CampService -> FormService : createEmptyFormForCampaign(campaignId=123)
+FormService -> FormRepo : save(formulaire vide)
+FormRepo -> DB : INSERT formulaire
+DB -> FormRepo : formulaire_id = 789
+FormRepo -> FormService : Formulaire créé (id=789)
+
+CampService -> Controller : CampaignCompleteDTO\n{campaignId: 123, productId: 456, formulaireId: 789}
+Controller -> Angular : HTTP 201 Created\n{data: {campaignId: 123, formulaireId: 789}}
+
+== Phase 3: Redirection vers Ajout des Questions ==
+
+Angular -> User : Notification succès\n"Campagne créée avec succès"
+Angular -> Angular : Redirection automatique vers\n/campaigns/123/questions/add
+
+Angular -> QuestionsForm : Navigation avec params\n{campaignId: 123, formulaireId: 789}
+QuestionsForm -> User : Interface d'ajout de questions\n• Formulaire dynamique\n• Boutons ajouter/supprimer questions
+
+== Phase 4: Ajout des Questions ==
+
+loop Ajout de chaque question
+    User -> QuestionsForm : Saisit question\n• Texte de la question\n• Type (choix multiple, échelle...)\n• Options si nécessaire
+    QuestionsForm -> QuestionsForm : Validation question\n• Texte non vide\n• Options cohérentes
+    QuestionsForm -> QuestionsForm : Ajoute à la liste locale\ndes questions
+end
+
+User -> QuestionsForm : Termine ajout des questions
+QuestionsForm -> User : Aperçu de toutes les questions\nsaisies
+
+== Phase 5: Sauvegarde des Questions ==
+
+User -> QuestionsForm : Clique "Sauvegarder Questions"
+QuestionsForm -> Controller : POST /api/formulaires/789/questions/batch\nBody: {questions: [...]} + JWT
+
+Controller -> FormService : addQuestionsToForm(formulaireId=789, questionsList)
+
+loop Pour chaque question dans la liste
+    FormService -> FormService : Validation question
+    FormService -> FormRepo : save(question + formulaire_question + options)
+    FormRepo -> DB : INSERT question, formulaire_question, options
+    DB -> FormRepo : question_id
+end
+
+FormService -> Controller : QuestionsAddedDTO\n{formulaireId: 789, questionsCount: X}
+Controller -> QuestionsForm : HTTP 201 Created\n{success: true, questionsCount: X}
+
+
+@enduml
