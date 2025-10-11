@@ -1,5 +1,6 @@
 package org.example.eurekaback.Service.ServiceResultatAnalyse;
 
+import org.example.eurekaback.Dto.SentimentAnalyticsDTO;
 import org.example.eurekaback.Entity.ResultatAnalyse;
 
 import java.util.List;
@@ -11,4 +12,9 @@ public interface ResultatAnalyseService {
     ResultatAnalyse createResultatAnalyse(ResultatAnalyse resultatAnalyse);
     void deleteResultatAnalyse(int id);
     ResultatAnalyse genererAnalysePourCampagne(int campagneId);
+
+    /**
+     * Récupère l'analyse de sentiments pour une campagne donnée
+     */
+    SentimentAnalyticsDTO getSentimentAnalyticsByCampaignId(Integer campaignId);
 }

@@ -1,0 +1,88 @@
+@startuml
+!theme plain
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+}
+
+title Diagramme de Classes - Sprint 2 : Entités Principales\nGestion des Campagnes - Plateforme Eureka
+
+class Campagne {
+    - id: int
+    - nom: String
+    - description: String
+    - dateDebut: Date
+    - dateFin: Date
+    - statut: String
+    - imageUrl: String
+    - annonceurId: Integer
+    + getAnnonceurId(): Integer
+    + setAnnonceurId(Integer): void
+    + setProduit(Produit): void
+}
+
+class Produit {
+    - id: int
+    - nom: String
+    - description: String
+    - categorie: String
+    - noteMoyenne: float
+}
+
+class Formulaire {
+    - id: int
+    - formulaireQuestions: Set<FormulaireQuestion>
+}
+
+class FormulaireQuestion {
+    - id: int
+}
+
+class Question {
+    - id: int
+    - texte: String
+    - options: Set<Option>
+}
+
+class Option {
+    - id: int
+    - texte: String
+    - valeur: String
+}
+
+enum StatutCampagne {
+    BROUILLON
+    PUBLIEE
+    CLOTUREE
+}
+
+' Relations principales
+Campagne ||--|| Produit : "possède"
+Campagne ||--|| Formulaire : "contient"
+Formulaire ||--o{ FormulaireQuestion : "contient"
+FormulaireQuestion }o--|| Question : "référence"
+Question ||--o{ Option : "possède"
+Campagne --> StatutCampagne : "statut"
+
+' Notes explicatives
+note right of Campagne
+  Entité centrale du Sprint 2
+  Chaque campagne est associée
+  à un produit et un formulaire
+end note
+
+note right of Formulaire
+  Créé automatiquement lors
+  de la création d'une campagne
+  Contient les questions du test
+end note
+
+note right of Question
+  Enrichies d'options pour :
+  - Choix multiples
+  - Échelles de notation
+  - Questions ouvertes
+end note
+
+@enduml

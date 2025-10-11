@@ -13,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "FormulaireQuestion")
+@Table(name = "formulaire_question")
 public class FormulaireQuestion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,8 +24,7 @@ public class FormulaireQuestion {
     @JsonIgnore
     private Formulaire formulaire;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "question_id")
-    @JsonIgnore
     private Question question;
 }

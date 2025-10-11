@@ -15,7 +15,7 @@ public interface PanelisteCampagneRepository extends JpaRepository<PanelisteCamp
     List<PanelisteCampagne> findByCampagne(Campagne campagne);
     
     // Find only participated campaigns (excluding invitations and refusals)
-    @Query("SELECT pc FROM PanelisteCampagne pc WHERE pc.paneliste = :paneliste AND pc.statut IN ('ACCEPTE', 'EN_COURS', 'COMPLETE')")
+    @Query("SELECT pc FROM PanelisteCampagne pc JOIN FETCH pc.campagne WHERE pc.paneliste = :paneliste AND pc.statut IN ('ACCEPTE', 'EN_COURS', 'COMPLETE')")
     List<PanelisteCampagne> findParticipatedCampaignsByPaneliste(@Param("paneliste") Paneliste paneliste);
     
     // Find campaigns by status
@@ -25,6 +25,9 @@ public interface PanelisteCampagneRepository extends JpaRepository<PanelisteCamp
     @Query("SELECT COUNT(pc) FROM PanelisteCampagne pc WHERE pc.paneliste.id = :panelisteId AND pc.statut IN ('ACCEPTE', 'EN_COURS', 'COMPLETE')")
     Long countParticipatedCampaignsByPanelisteId(@Param("panelisteId") Integer panelisteId);
     
+    // Simple count method for migration service
+    Long countByPanelisteId(Integer panelisteId);
+
     // New methods for participation request system
     
     // Find participation record by campaign and panelist

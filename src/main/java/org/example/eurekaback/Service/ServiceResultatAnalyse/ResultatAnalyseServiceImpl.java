@@ -2,6 +2,7 @@ package org.example.eurekaback.Service.ServiceResultatAnalyse;
 
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.example.eurekaback.Dto.SentimentAnalyticsDTO;
 import org.example.eurekaback.Entity.Campagne;
 import org.example.eurekaback.Entity.Feedback;
 import org.example.eurekaback.Entity.ResultatAnalyse;
@@ -61,10 +62,10 @@ public class ResultatAnalyseServiceImpl implements ResultatAnalyseService {
         }
 
         // Calculate average rating
-        double noteMoyenne = feedbackService.getNoteMoyennePourCampagne(campagneId);
+        double noteMoyenne = feedbackService.getNoteMoyennePourCampagne((long) campagneId);
 
         // Count feedback by rating
-        List<Feedback> feedbacks = feedbackService.getFeedbacksByCampagne(campagneId);
+        List<Feedback> feedbacks = feedbackService.getFeedbacksByCampagne((long) campagneId);
         Map<Integer, Long> countByRating = feedbacks.stream()
                 .collect(Collectors.groupingBy(Feedback::getNote, Collectors.counting()));
 
@@ -96,6 +97,20 @@ public class ResultatAnalyseServiceImpl implements ResultatAnalyseService {
         // Save results
         resultatAnalyse.setResultats(resultats);
         return resultatAnalyseRepository.save(resultatAnalyse);
+    }
+
+    @Override
+    public SentimentAnalyticsDTO getSentimentAnalyticsByCampaignId(Integer campaignId) {
+        return resultatAnalyseRepository.findByCampaignId(campaignId)
+                .map(ra -> new SentimentAnalyticsDTO(
+                        ra.getId(),
+                        ra.getSentimentAnalysisData(),
+                        ra.getSentimentAnalysisSummary(),
+                        ra.getSentimentLastUpdated(),
+                        ra.getSentimentTotalFeedbacks(),
+                        ra.getSentimentAnalyzedFeedbacks()
+                ))
+                .orElse(null);
     }
 
 }

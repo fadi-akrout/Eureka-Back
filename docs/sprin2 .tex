@@ -1,0 +1,270 @@
+\chapter{Sprint 2 : Gestion des Campagnes avec Formulaires et Produits}
+\newpage
+\section{Introduction}
+Le \textbf{Sprint 2} a été consacré à la mise en place du module de \textbf{gestion des campagnes}, intégrant la création de produits, formulaires et questions associés.
+Ce sprint constitue une étape clé du projet, car il pose les bases fonctionnelles qui permettront aux annonceurs de créer des campagnes complètes et aux panelistes d’y participer dans les prochains sprints.
+
+Les enjeux principaux identifiés sont :
+\begin{itemize}[label=\textbullet]
+    \item Modélisation correcte des entités et relations (Campagne, Produit, Annonceur, Paneliste).
+    \item Sécurité d'accès avec gestion des rôles (Annonceur, Paneliste, Admin).
+    \item Ergonomie et réactivité de l’interface Angular.
+    \item Validation robuste côté backend et frontend.
+    \item Préparation à l’intégration des participations panelistes et feedbacks (Sprint 3).
+\end{itemize}
+\subsection{Objectifs}
+\begin{itemize}[label=\textbullet]
+    \item Implémenter le \textbf{CRUD complet des campagnes}.
+    \item Assurer la \textbf{création du produit et du formulaire} lors de la création d’une campagne.
+    \item Développer la \textbf{gestion des questions} des formulaires.
+    \item Garantir la \textbf{sécurité par rôles} (Annonceur, Paneliste, Admin).
+\end{itemize}
+\section{Architecture et Conception Sprint 2}
+\subsection{Diagramme de Cas d’Utilisation}
+Le diagramme suivant présente les interactions principales des acteurs avec le module de gestion des campagnes :
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{images/Diagramme de Cas d'Utilisation - Sprint 2 Gestion des Campagnes.png} \caption{Cas d'utilisation : Gestion des campagnes (Sprint 2)}
+\end{figure}
+\subsection{Description du Diagramme de Cas d’Utilisation Sprint 2}
+
+Ce diagramme illustre les principales fonctionnalités liées à la \textbf{gestion des campagnes} dans la plateforme \textit{Eureka}.
+
+On distingue trois acteurs :
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Annonceur} : il crée, modifie et gère ses propres campagnes. Il peut aussi ajouter ou modifier les questions des formulaires associés.
+    \item \textbf{Paneliste} : il a un rôle plus limité, puisqu’il ne peut que consulter les campagnes publiées et prévisualiser les formulaires.
+    \item \textbf{Admin} : il dispose de privilèges complets, comme créer ou supprimer n’importe quelle campagne, ou encore forcer un changement de statut.
+\end{itemize}
+
+Le diagramme montre aussi des mécanismes techniques essentiels :
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Authentification et contrôle d’accès (RBAC)} pour sécuriser l’accès aux ressources.
+    \item \textbf{Validation des données} pour garantir la cohérence des informations saisies.
+    \item \textbf{Pagination et filtrage} afin de gérer efficacement l’affichage des campagnes.
+\end{itemize}
+
+\newpage
+\subsection{Modèle de Données : diagramme de classes Sprint2 }
+Le modèle suivant représente les entités principales liées à une campagne :
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/title Diagramme de Classes - Sprint 2 Entités Principales Gestion des Campagnes - Plateforme Eureka.png}
+    \caption{Modèle de données : Campagnes avec Produits et Formulaires}
+\end{figure}
+
+\textbf{Logique du modèle :}
+Chaque campagne est associée à un produit et un formulaire. Les formulaires contiennent des questions, elles-mêmes enrichies d’options (choix multiples,etc).
+
+\subsection{Workflow et Diagramme de Séquence}
+Le processus de création de campagne suit un workflow en 4 étapes :
+\begin{enumerate}
+    \item Création de la campagne de base.
+    \item Création du produit et du formulaire.
+    \item Ajout et configuration des questions.
+    \item Finalisation et prévisualisation.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Diagramme de Séquence - Création Campagne avec Flux Correct.png}
+    \caption{Diagramme de séquence : Création complète d’une campagne}
+\end{figure}
+
+\textbf{Logique du diagramme :}
+Ce schéma montre le cheminement technique entre l’acteur (Annonceur), le frontend Angular, le backend Spring Boot et la base de données pour garantir la cohérence des données.
+
+\subsection{Description du Diagramme de Séquence Création de Campagne}
+Ce diagramme illustre le processus suivi lorsqu’un annonceur crée une nouvelle campagne dans la plateforme Eureka.
+Le flux est pensé pour simplifier l’expérience de l’annonceur, en regroupant en une seule étape la création de la campagne, du produit associé et du formulaire.\newpage
+
+\subsection*{Étapes principales}
+
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Saisie des données} : L’annonceur remplit un formulaire unique qui contient à la fois les informations de la campagne (nom, description, dates) et celles du produit lié (nom, catégorie, description). Une première validation est faite côté client pour vérifier les champs obligatoires et la cohérence des dates.
+
+    \item \textbf{Création automatique côté backend} :
+    Une fois que l’annonceur clique sur « Ajouter », le backend prend en charge toute la logique métier.
+    \begin{itemize}
+        \item La campagne est enregistrée en base de données.
+        \item Un produit lui est automatiquement associé.
+        \item Un formulaire vide est également généré et rattaché à cette campagne.
+    \end{itemize}
+    L’ensemble est renvoyé au frontend sous forme d’un \texttt{CampaignCompleteDTO}.
+
+    \item \textbf{Redirection vers les questions} : Dès la création réussie, l’utilisateur est notifié puis redirigé vers l’interface d’ajout de questions pour compléter le formulaire. Cette étape lui permet de définir les questions que les panelistes devront répondre plus tard.
+
+    \item \textbf{Ajout et validation des questions} : L’annonceur peut saisir plusieurs questions (texte, type, options). Chaque question est validée localement avant d’être ajoutée à une liste temporaire.
+
+    \item \textbf{Sauvegarde en base} : Lorsque l’annonceur clique sur « Sauvegarder », toutes les questions sont envoyées en une seule requête batch au backend, qui les enregistre dans la base de données après une dernière validation.
+
+    \item \textbf{Confirmation} : Une fois la sauvegarde terminée, le système renvoie une réponse de succès contenant le nombre de questions ajoutées, confirmant que la campagne est désormais complète et prête à être utilisée.
+\end{itemize}
+Ce scénario montre comment la plateforme automatise la création d’une campagne avec son produit et son formulaire, tout en laissant à l’annonceur la liberté de personnaliser les questions. Cela rend le processus plus fluide, réduit les erreurs et garantit que chaque campagne est bien structurée dès le départ.
+
+\subsection{Architecture Frontend Angular}
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Modules principaux} :\newline Le \texttt{CampaignModule} structure l’ensemble des composants liés aux campagnes. \newline
+    Le \texttt{CampaignService} gère toute la logique métier et la communication avec le backend.
+    Enfin, les différents \texttt{CampaignComponent} (liste, formulaire, détail) offrent une interface claire et modulaire.
+    \item \textbf{Routing} :\newline Les routes mises en place permettent une navigation fluide :
+    \texttt{/campaigns} pour lister les campagnes, \texttt{/campaigns/new} pour la création,
+    \texttt{/campaigns/:id/edit} pour l’édition, et \texttt{/campaigns/:id} pour la consultation.
+    Chaque route est protégée par un \texttt{AuthGuard} afin d’assurer le respect des rôles (Admin, Annonceur, Paneliste).
+    \item \textbf{Services Angular} :\newline Le \texttt{CampagneService} fournit toutes les opérations CRUD, gère l’upload des images,
+    et expose des méthodes avancées comme la récupération d’analytics ou l’intégration de l’IA pour enrichir les descriptions.
+    \item \textbf{Validation} :\newline L’utilisation des Reactive Forms, associée à des validations synchrones et cross-fields
+    (par exemple vérifier que la date de fin est postérieure à la date de début), garantit la fiabilité des données saisies côté utilisateur.
+\end{itemize}
+\section{Fonctionnalités Développées}
+
+\subsection{Backend}
+\begin{itemize}[label=\textbullet]
+    \item \textbf{CRUD complet des campagnes} : \newline le backend permet désormais la création, la lecture, la mise à jour et la suppression
+    des campagnes avec gestion automatique des relations (produit, formulaire, annonceur).
+    \item \textbf{Validation des données} : \newline l’application applique des contraintes strictes (longueur des noms, cohérence des dates, statuts autorisés),
+    assurant l’intégrité et la qualité des informations stockées.
+    \item \textbf{Associations de la campagne} : \newline
+Chaque campagne est obligatoirement reliée à un \textbf{produit unique} (relation 1-1), ce qui assure une traçabilité claire entre les deux entités.
+\newline De plus, chaque campagne possède un \textbf{formulaire dédié}, qui peut contenir plusieurs questions afin de recueillir les retours des panelistes.
+
+    \item \textbf{Sécurité JWT et RBAC} : \newline  l’accès aux endpoints est protégé par des tokens JWT et un contrôle basé sur les rôles (admins, annonceurs, panelistes),
+    offrant une granularité fine des autorisations.
+\end{itemize}
+
+\subsection{Frontend}
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Formulaire réactif} :\newline l’interface de création/édition des campagnes est intuitive, avec validation en temps réel et
+    upload d’images.
+    \item \textbf{Liste paginée et filtrée} :\newline les utilisateurs peuvent rechercher et filtrer les campagnes par statut (planifiée, active, terminée),
+    le tout avec un rendu fluide et optimisé pour des dizaines de campagnes.
+    \item \textbf{Interface intuitive} :\newline l’expérience utilisateur repose sur des cartes visuelles, des badges colorés et des notifications en temps réel,
+    rendant la gestion des campagnes claire et agréable.
+    \item \textbf{Gestion des statuts} :\newline chaque statut est affiché visuellement via un badge coloré
+    (planifiée, active, terminée), facilitant la compréhension immédiate.
+
+\end{itemize}
+
+\section{Tests et Résultats}
+
+\subsection{Backend}
+\begin{itemize}[label=\textbullet]
+
+    \item \textbf{Tests d’intégration (Postman)} : \newline validation complète des endpoints CRUD, des règles de sécurité JWT, et du respect des rôles utilisateurs.
+    \item \textbf{Performance} :\newline temps de réponse rapide , y compris sur des listes paginées de campagnes.
+\end{itemize}
+
+\subsection{Frontend}
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Tests manuels} :\newline vérification du bon fonctionnement des formulaires, upload d’images, filtres de recherche, et responsive design.
+    \item \textbf{Performance UI} :\newline affichage fluide des campagnes , même sur des écrans mobiles.
+\end{itemize}
+\subsection{Tests d’Intégration}
+\begin{itemize}[label=\textbullet]
+    \item Création de campagne (succès et erreurs).
+    \item Ajout de questions avec validation des types.
+    \item Vérification des règles d’accès (401/403).
+\end{itemize}
+
+\subsection{Sécurité et Contrôle d’Accès}
+Le module repose sur :
+\begin{itemize}[label=\textbullet]
+    \item \textbf{JWT} pour l’authentification.
+    \item \textbf{RBAC (Role Based Access Control)} pour différencier les permissions entre Annonceur, Paneliste et Admin.
+    \item Vérification stricte des règles métier (exemple : seul un Admin peut supprimer une campagne).
+\end{itemize}
+
+
+\section{Problèmes et Solutions}
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Relations JPA cycliques} :\newline certaines entités provoquaient des boucles infinies lors de la sérialisation JSON,
+    corrigées grâce à l’annotation \texttt{@JsonIgnore}.
+
+    \item \textbf{Sécurité des endpoints} :\newline ajout d’annotations \texttt{@PreAuthorize} avec vérification que seul le propriétaire ou un admin peut modifier une campagne.
+    \item \textbf{CORS et JWT côté Angular} :\newline la configuration d’un \texttt{AuthInterceptor} a permis d’ajouter automatiquement le token JWT dans les requêtes sortantes.
+
+\end{itemize}
+
+\section{Réalisation: Ajout du campagne avec produit,formulaire et questions}
+\begin{itemize}[label=\textbullet]
+    \item Formulaire de création de campagne.
+    \item Interface de gestion des questions.
+    \end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/1.png}
+    \caption{Liste des campagnes}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/2.png}
+    \caption{Filtre par statues pour les campagnes}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/3.png}
+    \caption{Création du campagne}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/4.png}
+    \caption{Campagne détails dans la création du campagne}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/5.png}
+    \caption{Partie du produit dans la création du campagne}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/6.png}
+    \caption{Partie du formulaire dans la création du campagne}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/7.png}
+    \caption{Création des questions pour le formulaire du campagne}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/8.png}
+    \caption{Création des questions pour le formulaire du campagne partie2}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/9.png}
+    \caption{Création des questions avec options pour le formulaire du campagne}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/10.png}
+    \caption{Détails du campagne}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/Sprint2/11.png}
+    \caption{Actions de gestions du campagne pour l'annonceur }
+\end{figure}
+
+
+
+
+\section{Conclusion et Perspectives}
+Le Sprint 2 a permis d’implémenter avec succès un module complet de gestion des campagnes, côté backend comme frontend.\newline
+Les résultats atteints :
+\begin{itemize}[label=\textbullet]
+    \item Une API backend sécurisée, validée et performante.
+    \item Une interface frontend ergonomique et réactive.
+    \item Une performance optimisée grâce à la pagination, aux filtres et à la mise en cache.
+    \item Une couverture de tests jugée satisfaisante.
+      \item CRUD des campagnes avec produits et formulaires.
+    \item Sécurité renforcée avec JWT et RBAC.
+
+\end{itemize}
+
+\textbf{Préparation pour le Sprint 3 (participation reponses et feedback)} : le travail se poursuivra avec l’intégration des panélistes, la mise en place des invitations ciblées,
+la gestion des feedbacks et reponses des formulaires en temps réel et le développement de dashboards analytiques pour les annonceurs.
+
+

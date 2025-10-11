@@ -7,9 +7,12 @@ import org.example.eurekaback.Repository.*;
 import org.springframework.data.rest.webmvc.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,6 +24,8 @@ public class CampagneServiceImpl implements CampagneService {
     private final PanelisteCampagneRepository panelisteCampagneRepository;
     private final ResultatAnalyseRepository resultatAnalyseRepository;
     private final AnnonceurRepository annonceurRepository;
+    private final QuestionRepository questionRepository;
+    private final FormulaireQuestionRepository formulaireQuestionRepository;
 
     @Override
     public List<Campagne> getAllCampagnes() {
@@ -86,9 +91,186 @@ public class CampagneServiceImpl implements CampagneService {
         return savedCampagne;
     }
 
+    /**
+     * Helper method to delete all questions associated with a form
+     */
+
+    @Transactional
+    private void deleteQuestionsForFormulaire(Formulaire formulaire) {
+        if (formulaire == null) {
+            System.out.println("Formulaire is null, skipping question deletion");
+            return;
+        }
+        
+        int formulaireId = formulaire.getId();
+        System.out.println("Starting deletion of questions for formulaire ID: " + formulaireId);
+        
+        try {
+            // First, check if there are any questions directly in the database
+            String checkSql = "SELECT COUNT(*) FROM formulaire_question WHERE formulaire_id = " + formulaireId;
+            System.out.println("Executing SQL: " + checkSql);
+            
+            // Get count of questions for logging
+            List<Question> questions = questionRepository.findQuestionsByFormulaireId(formulaireId);
+            int questionCount = questions.size();
+            System.out.println("Found " + questionCount + " questions to delete for formulaire ID: " + formulaireId);
+            
+            // Direct database check for formulaire_question entries
+            String directCheckSql = "SELECT fq.id, fq.formulaire_id, fq.question_id FROM formulaire_question fq WHERE fq.formulaire_id = " + formulaireId;
+            System.out.println("Direct check SQL: " + directCheckSql);
+            
+            // Log the questions for debugging
+            if (questionCount > 0) {
+                for (Question q : questions) {
+                    System.out.println("Question to delete: ID=" + q.getId() + ", Text=" + q.getTexte());
+                }
+                
+                // Step 1: Delete all related options (to avoid foreign key constraints)
+                System.out.println("Deleting options for formulaire ID: " + formulaireId);
+                questionRepository.deleteOptionsByFormulaireId(formulaireId);
+                
+                // Step 2: Delete all related responses (to avoid foreign key constraints)
+                System.out.println("Deleting responses for formulaire ID: " + formulaireId);
+                questionRepository.deleteReponsesByFormulaireId(formulaireId);
+            }
+            
+            // Step 3: Always delete FormulaireQuestion entries for this form using direct query
+            System.out.println("Deleting formulaire-question mappings for formulaire ID: " + formulaireId);
+            // Use a direct SQL query to ensure deletion
+            String deleteFormQuestionSql = "DELETE FROM formulaire_question WHERE formulaire_id = " + formulaireId;
+            System.out.println("Executing SQL: " + deleteFormQuestionSql);
+            formulaireQuestionRepository.deleteByFormulaireId(formulaireId);
+            
+            if (questionCount > 0) {
+                // Step 4: Delete all questions associated with this form using direct query
+                System.out.println("Deleting questions for formulaire ID: " + formulaireId);
+                // Use a direct SQL query to ensure deletion
+                String deleteQuestionsSql = "DELETE FROM question WHERE id IN (SELECT question_id FROM formulaire_question WHERE formulaire_id = " + formulaireId + ")";
+                System.out.println("Executing SQL: " + deleteQuestionsSql);
+                questionRepository.deleteQuestionsByFormulaireId(formulaireId);
+            }
+            
+            // Step 5: Clear the form's questions list
+            formulaire.setFormulaireQuestions(new HashSet<>());
+            formulaireRepository.save(formulaire);
+            
+            System.out.println("Successfully deleted " + questionCount + " questions for formulaire ID " + formulaireId);
+            
+        } catch (Exception e) {
+            // Log the error but continue with the process
+            System.err.println("Error deleting questions for formulaire ID " + formulaireId + ": " + e.getMessage());
+            e.printStackTrace();
+            
+            // Fallback to manual deletion if the direct queries fail
+            try {
+                // Get all questions associated with this form
+                List<Question> questions = questionRepository.findQuestionsByFormulaireId(formulaireId);
+                
+                // For each question, clear its relationships to avoid constraint violations
+                for (Question question : questions) {
+                    if (question.getOptions() != null) {
+                        question.getOptions().clear();
+                    }
+                    
+                    if (question.getReponses() != null) {
+                        question.getReponses().clear();
+                    }
+                    
+                    // Save the question with cleared relationships
+                    questionRepository.save(question);
+                }
+                
+                // Delete all FormulaireQuestion entries for this form
+                List<FormulaireQuestion> formulaireQuestions = formulaireQuestionRepository.findByFormulaireId(formulaireId);
+                formulaireQuestionRepository.deleteAll(formulaireQuestions);
+                
+                // Delete all questions associated with this form
+                for (Question question : questions) {
+                    questionRepository.delete(question);
+                }
+                
+                System.out.println("Successfully deleted " + questions.size() + " questions for formulaire ID " + formulaireId + " using fallback method");
+                
+            } catch (Exception ex) {
+                System.err.println("Error in fallback deletion for formulaire ID " + formulaireId + ": " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }
+    }
+
     @Override
+    @Transactional
     public void deleteCampagne(int id) {
+        System.out.println("Starting deletion of campaign with ID: " + id);
+        
+        // Find the campaign to be deleted
+        Campagne campagne = campagneRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Campagne not found with id: " + id));
+        
+        System.out.println("Found campaign: " + campagne.getNom() + " (ID: " + campagne.getId() + ")");
+        
+        // Remove the campaign from its annonceur's list if applicable
+        if (campagne.getAnnonceur() != null) {
+            System.out.println("Removing campaign from annonceur: " + campagne.getAnnonceur().getNom());
+            campagne.getAnnonceur().getCampagnesCreees().remove(campagne);
+        }
+        
+        // Get the form associated with the campaign and delete its questions
+        Formulaire formulaire = campagne.getFormulaire();
+        if (formulaire != null) {
+            System.out.println("Found associated formulaire with ID: " + formulaire.getId());
+            
+            // First, explicitly delete all questions and their associations
+            deleteQuestionsForFormulaire(formulaire);
+            
+            // Execute direct SQL to ensure all formulaire_question entries are deleted
+            System.out.println("Executing direct SQL to delete formulaire_question entries");
+            String deleteFormQuestionSql = "DELETE FROM formulaire_question WHERE formulaire_id = " + formulaire.getId();
+            System.out.println("SQL: " + deleteFormQuestionSql);
+            
+            // Then, explicitly delete the formulaire
+            System.out.println("Explicitly deleting formulaire with ID: " + formulaire.getId());
+            formulaireRepository.delete(formulaire);
+            
+            // Detach the formulaire from the campaign to avoid cascade issues
+            campagne.setFormulaire(null);
+            campagneRepository.save(campagne);
+        } else {
+            System.out.println("No formulaire found for this campaign");
+        }
+        
+        // Handle other relationships
+        if (campagne.getProduit() != null) {
+            System.out.println("Detaching produit with ID: " + campagne.getProduit().getId());
+            Produit produit = campagne.getProduit();
+            campagne.setProduit(null);
+            produitRepository.delete(produit);
+        }
+        
+        if (campagne.getResultatAnalyse() != null) {
+            System.out.println("Detaching resultat analyse with ID: " + campagne.getResultatAnalyse().getId());
+            ResultatAnalyse resultatAnalyse = campagne.getResultatAnalyse();
+            campagne.setResultatAnalyse(null);
+            resultatAnalyseRepository.delete(resultatAnalyse);
+        }
+        
+        // Clear any paneliste associations
+        if (campagne.getPanelisteCampagnes() != null && !campagne.getPanelisteCampagnes().isEmpty()) {
+            System.out.println("Clearing " + campagne.getPanelisteCampagnes().size() + " paneliste associations");
+            for (PanelisteCampagne pc : new ArrayList<>(campagne.getPanelisteCampagnes())) {
+                campagne.removePanelisteCampagne(pc);
+                panelisteCampagneRepository.delete(pc);
+            }
+        }
+        
+        // Save the campaign with all relationships detached
+        campagneRepository.save(campagne);
+        
+        // Finally, delete the campaign
+        System.out.println("Deleting campaign with ID: " + id);
         campagneRepository.deleteById(id);
+        
+        System.out.println("Campaign deletion completed successfully");
     }
     
     @Override
@@ -133,6 +315,7 @@ public class CampagneServiceImpl implements CampagneService {
         savedCampagne.setProduit(savedProduit);
 
         // Set bidirectional relationship for Formulaire
+        // Even if the form has no questions, we still create and associate it with the campaign
         formulaire.setCampagne(savedCampagne);
         Formulaire savedFormulaire = formulaireRepository.save(formulaire);
 
@@ -156,6 +339,12 @@ public class CampagneServiceImpl implements CampagneService {
         existingCampagne.setDateDebut(campagne.getDateDebut());
         existingCampagne.setDateFin(campagne.getDateFin());
         existingCampagne.setStatut(campagne.getStatut());
+        
+        // Update the image URL if provided
+        if (campagne.getImageUrl() != null && !campagne.getImageUrl().isEmpty()) {
+            System.out.println("Updating campaign image URL from: " + existingCampagne.getImageUrl() + " to: " + campagne.getImageUrl());
+            existingCampagne.setImageUrl(campagne.getImageUrl());
+        }
         
         // Handle the annonceur relationship
         if (campagne.getAnnonceur() != null) {
@@ -217,9 +406,10 @@ public class CampagneServiceImpl implements CampagneService {
                     existingFormulaire.getFormulaireQuestions().add(question);
                 });
             }
+            // Save the form even if it has no questions
             formulaireRepository.save(existingFormulaire);
         } else {
-            // Create new form
+            // Create new form even if it has no questions
             formulaire.setCampagne(savedCampagne);
             Formulaire savedFormulaire = formulaireRepository.save(formulaire);
             savedCampagne.setFormulaire(savedFormulaire);

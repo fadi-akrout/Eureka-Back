@@ -1,0 +1,270 @@
+\chapter{Sprint 5: Analyse des Campagnes et Gamification}
+
+\section{Introduction}
+
+Ce sprint a marqué une étape très importante dans notre projet.
+Après avoir mis en place la gestion des campagnes, des participations et des retours utilisateurs,
+nous avons voulu aller plus loin en donnant plus de valeur aux données collectées et en rendant la plateforme plus motivante.
+
+Concrètement, nous avons travaillé sur deux grands axes :
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Analyses avancés} : analyser les retours des panelistes grâce à l'intelligence artificielle (analyse de sentiment).
+    \item \textbf{Gamification} : mettre en place un système de récompenses (niveaux, badges, leaderboard) pour motiver les panelistes à participer davantage.
+\end{itemize}
+
+
+\section{Architecture et Conception Sprint 5}
+
+Dans cette section, nous présentons les principaux diagrammes réalisés pour illustrer les fonctionnalités mises en place durant le Sprint 5, notamment l’analyse des campagnes avec IA et le système de gamification basé sur la participation.
+
+\subsection{Diagramme de Cas d’Utilisation}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/sprint5/Eureka - Sprint 5 (Analytics & Gamification) use case.png}
+    \caption{Diagramme de cas d’utilisation : Analytics et Gamification (Sprint 5)}
+\end{figure}
+
+Le diagramme de cas d’utilisation montre les interactions principales :
+\begin{itemize}[label=\textbullet]
+    \item L’annonceur peut lancer une analyse de sentiment sur les feedbacks d’une campagne et visualiser les résultats dans un tableau de bord.
+    \item Les panélistes participent aux campagnes, et leurs participations validées déclenchent le mécanisme de gamification (niveaux, badges, leaderboard).
+    \item Les administrateurs peuvent superviser les données globales et contrôler l’accès aux fonctionnalités sensibles.
+\end{itemize}
+
+\subsection{Diagramme de Séquence}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/Diagramme de Séquence analyses et gamification.png}
+    \caption{Diagramme de séquence : Analyse de sentiment et Gamification (Sprint 5)}
+\end{figure}
+
+Le diagramme de séquence illustre deux scénarios majeurs :
+\begin{enumerate}
+    \item \textbf{Analyse de sentiment} :
+    \begin{itemize}[label=\textbullet]
+        \item L’annonceur demande une analyse sur les feedbacks d’une campagne.
+        \item Le backend envoie ces données au modèle IA \texttt{Gemini-1.5-flash}.
+        \item Les résultats (positif/négatif/neutre + scores de confiance + insights) sont enregistrés dans la base de données , interprétés et affichés dans un dashboard interprétatif.
+    \end{itemize}
+    \item \textbf{Gamification basée sur la participation} :
+    \begin{itemize}[label=\textbullet]
+        \item Un paneliste participe à une campagne.
+        \item Après validation par l’annonceur, la participation est enregistrée.
+        \item Le backend met à jour automatiquement le profil de gamification : niveau, badges et progression.
+        \item Le paneliste voit ses récompenses et son classement actualisés.
+    \end{itemize}
+\end{enumerate}
+\section{Intégration de l’IA dans l’Analyse de Sentiment et la Gamification}
+
+Ce diagramme illustre le processus complet que nous avons conçu pour l’analyse de sentiment et la gamification.
+Il est important de noter que le travail ne s’est pas limité à l’intégration d’une API externe (Gemini), mais à la mise en place
+d’une architecture robuste et cohérente autour de cette fonctionnalité.
+
+\paragraph{Conception d’un flux complet.}
+Le parcours commence par l’extraction des feedbacks des campagnes depuis la base de données,
+suivie de la validation et de la préparation des textes. Ceux-ci sont ensuite envoyés au modèle IA Gemini sous une forme structurée.
+Les réponses sont ensuite traitées : parsing du JSON, transformation en objets métier et persistance en base.
+Enfin, les résultats sont mis à disposition dans un tableau de bord clair et interactif pour les annonceurs.
+
+\paragraph{Traitement post-IA.}
+Plutôt que d’afficher directement les réponses brutes de Gemini, un travail supplémentaire d’enrichissement est effectué :
+\begin{itemize}[label=\textbullet]
+    \item comptage des sentiments (positifs, négatifs, neutres),
+    \item calcul du taux de confiance moyen,
+    \item agrégation en statistiques globales,
+    \item génération de résumés interprétables et utiles pour la prise de décision.
+\end{itemize}
+
+\paragraph{Mise en valeur visuelle côté frontend.}
+Ces résultats sont présentés sous forme de graphiques clairs (Chart.js/Recharts) et de tableaux synthétiques.
+Un tableau de bord centralisé permet aux annonceurs de visualiser immédiatement la distribution des sentiments
+et les insights générés par l’IA, ce qui valorise les feedbacks collectés.
+
+\paragraph{Robustesse et sécurité.}
+L’intégration a été pensée pour être résiliente :
+\begin{itemize}[label=\textbullet]
+    \item gestion des erreurs comme les timeouts ou les réponses incohérentes,
+    \item mise en place d’un mode dégradé (fallback) si l’IA échoue,
+    \item sécurisation des endpoints via un contrôle strict des rôles (Annonceur, Admin, Paneliste).
+\end{itemize}
+
+\paragraph{Gamification intégrée au processus.}
+En parallèle, la gamification repose sur un mécanisme automatique :
+chaque fois qu’un annonceur valide une participation, le backend met à jour le profil du panéliste,
+recalcule son niveau et attribue automatiquement des badges selon un compteur de participations.
+Ce système rend l’expérience motivante et cohérente pour les utilisateurs.
+
+\bigskip
+En résumé, ce diagramme met en évidence un travail d’ingénierie complet :
+non seulement l’intégration d’un modèle IA performant, mais aussi la construction d’un écosystème fiable,
+sécurisé et orienté utilisateur, qui transforme les feedbacks bruts en informations stratégiques exploitables
+et enrichit l’expérience grâce à la gamification.
+\section{Architecture Technique}
+\subsection{Backend}
+Le backend repose sur \textbf{Spring Boot 3}, \textbf{PostgreSQL} et \textbf{Spring Security}.
+L'IA est intégrée via l'API de Google Gemini.
+Nous avons organisé notre code en services séparés (analytics, gamification, IA) pour garder une architecture claire et évolutive.
+
+\begin{itemize}[label=\textbullet]
+    \item \textbf{IA} : intégration du modèle \texttt{Gemini-1.5-flash} pour l'analyse de sentiment.
+    \item \textbf{Analytics} : calcul de statistiques détaillées (distribution des sentiments, taux de complétion, mots-clés, tendances).
+    \item \textbf{Gamification} : gestion des profils, niveaux, badges, événements.
+    \item \textbf{Sécurité} : contrôle d'accès basé sur les rôles (\texttt{ADMIN}, \texttt{ANNONCEUR}, \texttt{PANELISTE}).
+\end{itemize}
+
+\subsection{Frontend}
+Le frontend est développé avec \textbf{Angular 18}, en TypeScript strict.
+Nous avons construit des composants autonomes pour chaque grande fonctionnalité et ajouté des services pour la logique métier.
+
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Analytics UI} : dashboards de sentiment, boutons d’analyse individuelle, analyse en masse avec barres de confiance.
+    \item \textbf{Gamification UI} : profil de gamification, leaderboard interactif, badges et notifications en temps réel.
+    \item \textbf{Expérience utilisateur} : design responsive avec Bootstrap et animations CSS, accessibilité (labels ARIA, navigation clavier).
+\end{itemize}
+
+\section{Système de Gamification}
+
+\subsection{Niveaux et Badges}
+Le système est entièrement basé sur les participations des panelistes : plus un utilisateur participe, plus il progresse.
+
+\textbf{Niveaux :}
+\begin{itemize}[label=\textbullet]
+    \item Bronze (0+ participations)
+    \item Argent (3+ participations)
+    \item Or (10+ participations)
+    \item Diamant (25+ participations)
+\end{itemize}
+
+\textbf{Badges débloqués :}
+\begin{itemize}[label=\textbullet]
+    \item First Steps : 1 participation
+    \item Regular Participant : 5 participations
+    \item Dedicated Tester : 10 participations
+    \item Expert Reviewer : 15 participations
+    \item Campaign Master : 25 participations
+    \item Legend : 50 participations
+\end{itemize}
+
+\subsection{Leaderboard et Profil}
+Chaque utilisateur peut voir son niveau, ses badges, et sa progression vers le prochain niveau.
+Un \textbf{leaderboard} affiche le classement des panelistes, ce qui ajoute un aspect compétitif motivant.
+
+Les notifications en temps réel (``Bravo, vous avez débloqué un nouveau badge !'') renforcent encore l’expérience.
+
+\section{Analytics des Campagnes}
+
+\subsection{Analyse de Sentiment}
+Nous avons intégré le modèle \texttt{Gemini-1.5-flash} de Google AI.
+Ce modèle est spécialisé dans l’analyse rapide et multilingue des textes.
+
+\begin{itemize}[label=\textbullet]
+    \item \textbf{Entrée} : feedback textuel d’un paneliste.
+    \item \textbf{Sortie} : sentiment (POSITIVE, NEGATIVE, NEUTRAL), score de confiance (0.0 à 1.0) et éventuellement des insights contextuels.
+\end{itemize}
+
+\textbf{Pourquoi ce modèle ?}
+\begin{itemize}[label=\textbullet]
+    \item Temps de réponse optimisé (adapté au temps réel).
+    \item Bonne précision et compréhension du contexte.
+    \item Support multilingue (important car les retours ne sont pas tous dans la même langue).
+\end{itemize}
+
+\subsection{Métriques Calculées}
+Le backend produit des statistiques utiles pour les annonceurs et les administrateurs :
+\begin{itemize}[label=\textbullet]
+    \item Distribution des sentiments (combien de positifs, négatifs, neutres).
+    \item Scores de confiance moyens.
+    \item Taux de complétion d’une campagne.
+    \item Nombre total de participants.
+    \item Tendances journalières des retours.
+\end{itemize}
+
+\subsection{Visualisation Frontend}
+Ces données sont représentées dans l’interface sous forme de graphiques interactifs :
+\begin{itemize}[label=\textbullet]
+    \item Barres colorées pour les sentiments.
+    \item Camemberts pour les répartitions.
+    \item Courbes pour les tendances dans le temps.
+\end{itemize}
+
+\section{Sécurité}
+
+Chaque endpoint est sécurisé avec JWT et vérifie le rôle de l’utilisateur :
+\begin{itemize}[label=\textbullet]
+    \item \texttt{ADMIN} : accès complet.
+    \item \texttt{ANNONCEUR} : accès uniquement à ses campagnes.
+    \item \texttt{PANELISTE} : accès à son profil de gamification.
+\end{itemize}
+
+\section{Tests et Résultats}
+
+\subsection{Backend}
+\begin{itemize}[label=\textbullet]
+    \item Tests pour la logique de gamification et d’analytics.
+    \item Tests d’intégration avec l’API Gemini.
+    \item Tests de sécurité (contrôle d’accès aux endpoints).
+\end{itemize}
+
+\subsection{Frontend}
+\begin{itemize}[label=\textbullet]
+    \item Tests sur les composants et services.
+    \item Tests end-to-end des parcours complets (soumission campagne → analytics → gamification).
+    \item Vérifications de performance et d’accessibilité.
+\end{itemize}
+
+\section{Réalisations : Interfaces des analyses et profile}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/analyses se'ntiments.png}
+    \caption{Analyses sentiments des feedbacks}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/analytics1.png}
+    \caption{Dashboard analyses générales }
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/analytics2.png}
+    \caption{Dashboard analyses sentiments}
+\end{figure}\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/analytics3.png}
+    \caption{Dashboard analyses rating }
+\end{figure}\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/analytics4.png}
+    \caption{Dashboard analyses insights}
+\end{figure}\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/profile1.png}
+    \caption{Profile générique }
+\end{figure}\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/profile2.png}
+    \caption{Profile Gamification }
+\end{figure}\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/profile3.png}
+    \caption{Rewards et historique de participation}
+\end{figure}\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{images/sprint5/profile4.png}
+    \caption{Leaderboard}
+\end{figure}
+
+\subsection{Conclusion et Impact}
+\begin{itemize}[label=\textbullet]
+    \item Pour les \textbf{panelistes} : plus de motivation grâce à la progression, aux badges et au leaderboard qui valorisent leur engagement.
+    \item Pour les \textbf{annonceurs} : une meilleure compréhension des retours utilisateurs grâce à l’analyse de sentiment alimentée par l’IA.
+    \item Pour les \textbf{admins} : un monitoring complet, centralisé et sécurisé de l’ensemble de la plateforme.
+\end{itemize}
+
+\noindent
+En conclusion, l’intégration conjointe de l’IA et de la gamification dans ce sprint
+renforce à la fois l’expérience des utilisateurs et la valeur ajoutée de la plateforme.
+Les annonceurs prennent de meilleures décisions, les panélistes participent avec davantage de motivation,
+et les administrateurs disposent d’outils fiables pour superviser le système.
+Cela marque une étape clé vers une plateforme plus intelligente et engageante.

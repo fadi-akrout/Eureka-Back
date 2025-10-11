@@ -20,7 +20,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/participation-requests")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*", maxAge = 3600)
 @Slf4j
 public class ParticipationRequestController {
     

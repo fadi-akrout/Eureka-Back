@@ -1,5 +1,6 @@
 package org.example.eurekaback.Config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.hibernate5.jakarta.Hibernate5JakartaModule;
@@ -32,6 +33,9 @@ public class JacksonConfig {
         
         // Configure to write dates as ISO strings instead of timestamps
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        
+        // Configure to ignore unknown properties during deserialization
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         
         return mapper;
     }
